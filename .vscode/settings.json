@@ -1,0 +1,48 @@
+{
+  // Archivos excluidos del explorador de VSCode
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/coverage": true,
+    "**/*.tsbuildinfo": true
+  },
+
+  // Archivos excluidos de la búsqueda
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/.git": true,
+    "**/package-lock.json": true,
+    "**/*.tsbuildinfo": true
+  },
+
+  // Watcher excluye estos archivos
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/coverage/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true
+  },
+
+  // TypeScript
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // Formato al guardar
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // ESLint
+  "eslint.validate": [
+    "javascript",
+    "typescript"
+  ],
+
+  // Git
+  "git.ignoreLimitWarning": true
+}
