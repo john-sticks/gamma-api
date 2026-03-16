@@ -14,7 +14,7 @@ import {
   EventLifecycleStatus,
 } from '../entities/event.entity';
 import { PaginatedResponse } from '../../common/dto';
-import { Between, ILike, In } from 'typeorm';
+import { Between, Like, In } from 'typeorm';
 import { UserRole } from '../../common/types/roles';
 import { User } from '../../users/entities/user.entity';
 import { EventUpdatesService } from './event-updates.service';
@@ -174,7 +174,7 @@ export class EventsService {
     }
 
     if (search) {
-      where.title = ILike(`%${search}%`);
+      where.title = Like(`%${search}%`);
     }
 
     if (eventType) {

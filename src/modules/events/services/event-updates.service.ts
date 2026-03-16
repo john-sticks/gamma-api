@@ -231,7 +231,7 @@ export class EventUpdatesService {
       .where('eu.status = :status', { status: EventUpdateStatus.PENDING });
 
     if (search) {
-      qb.andWhere('(event.title ILIKE :search OR eu.notes ILIKE :search)', {
+      qb.andWhere('(event.title LIKE :search OR eu.notes LIKE :search)', {
         search: `%${search}%`,
       });
     }
@@ -325,9 +325,9 @@ export class EventUpdatesService {
       .andWhere(
         'eu.id = (' +
           'SELECT eu2.id FROM event_updates eu2 ' +
-          'WHERE eu2."eventId" = eu."eventId" ' +
+          'WHERE eu2.`eventId` = eu.`eventId` ' +
           "AND eu2.status = 'approved' " +
-          'ORDER BY eu2."updateTime" DESC LIMIT 1' +
+          'ORDER BY eu2.`updateTime` DESC LIMIT 1' +
           ')',
       )
       .getMany();
