@@ -18,9 +18,9 @@ ENV DATABASE_HOST=172.17.0.1 \
     DATABASE_NAME=gamma \
     JWT_SECRET=change-me-in-production \
     JWT_EXPIRES_IN=24h \
-    PORT=3000 \
+    PORT=3001 \
     TZ=America/Argentina/Buenos_Aires
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["node", "dist/main"]
