@@ -46,6 +46,7 @@ export class EventsController {
   ) {}
 
   @Post()
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a new event',
@@ -75,7 +76,7 @@ export class EventsController {
   }
 
   @Get('map')
-  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3)
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_5)
   @ApiOperation({
     summary: 'Get all approved events for map display',
     description: 'Only approved events without pagination for map markers',
@@ -114,7 +115,13 @@ export class EventsController {
   }
 
   @Get('summary')
-  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
+  @Roles(
+    UserRole.LEVEL_1,
+    UserRole.LEVEL_2,
+    UserRole.LEVEL_3,
+    UserRole.LEVEL_4,
+    UserRole.LEVEL_5,
+  )
   @ApiOperation({
     summary: 'Get events with latest update info',
     description:
@@ -244,6 +251,7 @@ export class EventsController {
   }
 
   @Patch(':id')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
   @ApiOperation({
     summary: 'Update event',
     description: 'Update event. Only owner or moderator+ can edit.',
@@ -267,6 +275,7 @@ export class EventsController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete event',
@@ -300,6 +309,7 @@ export class EventsController {
 
   // Event Updates routes
   @Post(':id/updates')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Add update to an event',
@@ -381,6 +391,7 @@ export class EventsController {
   }
 
   @Patch(':eventId/updates/:updateId')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
   @ApiOperation({
     summary: 'Update an event update',
     description:
@@ -408,6 +419,7 @@ export class EventsController {
   }
 
   @Delete(':eventId/updates/:updateId')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3, UserRole.LEVEL_4)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Delete an update',
