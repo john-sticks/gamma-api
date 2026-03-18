@@ -227,6 +227,8 @@ export class EventUpdatesService {
     const qb = this.eventUpdatesRepository
       .createQueryBuilder('eu')
       .leftJoinAndSelect('eu.event', 'event')
+      .leftJoinAndSelect('event.city', 'city')
+      .leftJoinAndSelect('event.locality', 'locality')
       .leftJoinAndSelect('eu.createdBy', 'createdBy')
       .where('eu.status = :status', { status: EventUpdateStatus.PENDING });
 
