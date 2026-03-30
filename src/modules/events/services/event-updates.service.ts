@@ -17,6 +17,7 @@ import {
 } from '../entities/event-update.entity';
 import { EventLifecycleStatus } from '../entities/event.entity';
 import { UserRole } from '../../common/types/roles';
+import { GeoValidationService } from './geo-validation.service';
 
 @Injectable()
 export class EventUpdatesService {
@@ -24,6 +25,7 @@ export class EventUpdatesService {
     private readonly eventUpdatesRepository: EventUpdatesRepository,
     @Inject(forwardRef(() => EventsRepository))
     private readonly eventsRepository: EventsRepository,
+    private readonly geoValidationService: GeoValidationService,
   ) {}
 
   async create(
@@ -60,6 +62,36 @@ export class EventUpdatesService {
         throw new BadRequestException(
           'La fecha y hora de la actualización debe ser posterior a la última actualización registrada',
         );
+      }
+    }
+
+    // LOCATION_UPDATE requiere coordenadas y que caigan dentro del partido del evento
+    if (createEventUpdateDto.updateType === EventUpdateType.LOCATION_UPDATE) {
+      const lat = createEventUpdateDto.latitude;
+      const lng = createEventUpdateDto.longitude;
+
+      if (lat == null || lng == null) {
+        throw new BadRequestException(
+          'latitude y longitude son requeridos para un location_update',
+        );
+      }
+
+      const eventWithCity = await this.eventsRepository.findOne({
+        where: { id: eventId },
+        relations: ['city'],
+      });
+
+      if (eventWithCity?.city) {
+        const isInside = this.geoValidationService.isPointInPartido(
+          eventWithCity.city.name,
+          lat,
+          lng,
+        );
+        if (!isInside) {
+          throw new BadRequestException(
+            `Las coordenadas no corresponden al partido ${eventWithCity.city.name}`,
+          );
+        }
       }
     }
 
@@ -312,6 +344,33 @@ export class EventUpdatesService {
         streetClosure: u.streetClosure,
       })),
     };
+  }
+
+  async getRouteForEvents(
+    eventIds: string[],
+  ): Promise<Record<string, { latitude: number; longitude: number; updateTime: Date }[]>> {
+    if (eventIds.length === 0) return {};
+
+    const updates = await this.eventUpdatesRepository
+      .createQueryBuilder('eu')
+      .select(['eu.eventId', 'eu.latitude', 'eu.longitude', 'eu.updateTime'])
+      .where('eu.eventId IN (:...eventIds)', { eventIds })
+      .andWhere('eu.status = :status', { status: EventUpdateStatus.APPROVED })
+      .andWhere('eu.latitude IS NOT NULL')
+      .andWhere('eu.longitude IS NOT NULL')
+      .orderBy('eu.updateTime', 'ASC')
+      .getMany();
+
+    const result: Record<string, { latitude: number; longitude: number; updateTime: Date }[]> = {};
+    for (const update of updates) {
+      if (!result[update.eventId]) result[update.eventId] = [];
+      result[update.eventId].push({
+        latitude: update.latitude,
+        longitude: update.longitude,
+        updateTime: update.updateTime,
+      });
+    }
+    return result;
   }
 
   async getLatestUpdatesForEvents(

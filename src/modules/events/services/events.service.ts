@@ -12,6 +12,7 @@ import {
   Event,
   EventStatus,
   EventLifecycleStatus,
+  EventType,
 } from '../entities/event.entity';
 import { PaginatedResponse } from '../../common/dto';
 import { Between, Like, In } from 'typeorm';
@@ -394,12 +395,18 @@ export class EventsService {
     });
 
     const eventIds = events.map((e) => e.id);
-    const latestUpdates =
-      await this.eventUpdatesService.getLatestUpdatesForEvents(eventIds);
+    const marchIds = events
+      .filter((e) => e.eventType === EventType.MARCHA)
+      .map((e) => e.id);
+
+    const [latestUpdates, routes] = await Promise.all([
+      this.eventUpdatesService.getLatestUpdatesForEvents(eventIds),
+      this.eventUpdatesService.getRouteForEvents(marchIds),
+    ]);
 
     return events.map((event) => {
       const latestUpdate = latestUpdates[event.id];
-      return {
+      const base = {
         ...event,
         latestUpdate: latestUpdate
           ? {
@@ -407,9 +414,17 @@ export class EventsService {
               policePresence: latestUpdate.policePresence,
               streetClosure: latestUpdate.streetClosure,
               updateTime: latestUpdate.updateTime,
+              latitude: latestUpdate.latitude ?? null,
+              longitude: latestUpdate.longitude ?? null,
             }
           : null,
       };
+
+      if (event.eventType === EventType.MARCHA) {
+        return { ...base, route: routes[event.id] ?? [] };
+      }
+
+      return base;
     });
   }
 

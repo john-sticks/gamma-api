@@ -72,24 +72,24 @@ export class CreateEventUpdateDto {
   notes?: string;
 
   @ApiPropertyOptional({
-    description: 'Specific latitude at this moment (if event is moving)',
+    description: 'Specific latitude at this moment (required for location_update)',
     example: -34.6037,
     minimum: -90,
     maximum: 90,
   })
-  @IsOptional()
+  @ValidateIf((o: CreateEventUpdateDto) => o.updateType === EventUpdateType.LOCATION_UPDATE || o.latitude != null)
   @IsNumber()
   @Min(-90)
   @Max(90)
   latitude?: number;
 
   @ApiPropertyOptional({
-    description: 'Specific longitude at this moment (if event is moving)',
+    description: 'Specific longitude at this moment (required for location_update)',
     example: -58.3816,
     minimum: -180,
     maximum: 180,
   })
-  @IsOptional()
+  @ValidateIf((o: CreateEventUpdateDto) => o.updateType === EventUpdateType.LOCATION_UPDATE || o.longitude != null)
   @IsNumber()
   @Min(-180)
   @Max(180)

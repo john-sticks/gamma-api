@@ -42,4 +42,5 @@ export const UPDATE_TYPE_LABELS: Record<EventUpdateType, string> = {
   [EventUpdateType.EVENT_START]: 'Inicio del evento',
   [EventUpdateType.EVENT_END]: 'Fin del evento',
   [EventUpdateType.EVENT_CREATED]: 'Evento creado',
+  [EventUpdateType.LOCATION_UPDATE]: 'Actualización de posición',
 };

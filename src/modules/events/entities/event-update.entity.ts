@@ -26,6 +26,7 @@ export enum EventUpdateType {
   EVENT_START = 'event_start',
   EVENT_END = 'event_end',
   EVENT_CREATED = 'event_created',
+  LOCATION_UPDATE = 'location_update',
 }
 
 @Entity('event_updates')
