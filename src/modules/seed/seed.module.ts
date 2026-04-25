@@ -4,6 +4,7 @@ import { CreateSuperAdminCommand } from './commands/create-super-admin.command';
 import { SeedCitiesCommand } from './commands/seed-cities.command';
 import { SeedEventTitlesCommand } from './commands/seed-event-titles.command';
 import { SeedLocalitiesCommand } from './commands/seed-localities.command';
+import { SeedAllCommand } from './commands/seed-all.command';
 import { UsersModule } from '../users/users.module';
 import { CitiesModule } from '../cities/cities.module';
 import { EventsModule } from '../events/events.module';
@@ -15,6 +16,7 @@ import { EventsModule } from '../events/events.module';
     SeedCitiesCommand,
     SeedEventTitlesCommand,
     SeedLocalitiesCommand,
+    SeedAllCommand,
   ],
 })
 export class SeedModule {}
