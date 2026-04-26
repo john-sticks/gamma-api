@@ -55,7 +55,11 @@ export class GeoValidationService implements OnModuleInit {
         const departamento = feature.properties?.departamento;
         const name =
           typeof departamento === 'string'
-            ? departamento.toUpperCase().trim()
+            ? departamento
+                .toUpperCase()
+                .trim()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
             : '';
         if (name) {
           this.polygons.set(name, feature);
@@ -71,7 +75,11 @@ export class GeoValidationService implements OnModuleInit {
   }
 
   private normalizeName(cityName: string): string {
-    const upper = cityName.toUpperCase().trim();
+    const upper = cityName
+      .toUpperCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
     return GeoValidationService.NAME_EXCEPTIONS[upper] || upper;
   }
 

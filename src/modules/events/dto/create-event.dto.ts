@@ -87,16 +87,6 @@ export class CreateEventDto {
   longitude: number;
 
   @ApiPropertyOptional({
-    description: 'Número estimado de asistentes',
-    example: 500,
-    minimum: 0,
-  })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  attendeeCount?: number;
-
-  @ApiPropertyOptional({
     description: 'ID de la localidad dentro del partido',
     example: 'uuid-locality',
   })

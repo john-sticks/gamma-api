@@ -125,7 +125,7 @@ export class EventsService {
       {
         updateTime: createEventDto.eventDate,
         updateType: EventUpdateType.EVENT_CREATED,
-        attendeeCount: createEventDto.attendeeCount || 0,
+        attendeeCount: 0,
         policePresence: false,
         streetClosure: false,
         notes: 'Evento creado - Estado inicial',
