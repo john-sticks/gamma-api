@@ -55,6 +55,14 @@ export class UpdateEventUpdateDto {
   streetClosure?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Tire burning',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  tireBurning?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Specific observations',
   })
   @IsOptional()

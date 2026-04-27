@@ -59,6 +59,9 @@ export class EventUpdate {
   @Column({ type: 'boolean', default: false })
   streetClosure: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  tireBurning: boolean;
+
   @Column({ type: 'text', nullable: true })
   notes: string;
 

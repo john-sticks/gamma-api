@@ -344,6 +344,7 @@ export class ExportService {
       { header: 'Asistentes', key: 'attendeeCount', width: 12 },
       { header: 'Policía', key: 'policePresence', width: 10 },
       { header: 'Corte', key: 'streetClosure', width: 10 },
+      { header: 'Quema cubiertas', key: 'tireBurning', width: 16 },
       { header: 'Notas', key: 'notes', width: 50 },
       { header: 'Registrado por', key: 'createdBy', width: 25 },
     ];
@@ -363,6 +364,7 @@ export class ExportService {
         attendeeCount: update.attendeeCount || '',
         policePresence: update.policePresence ? 'Sí' : 'No',
         streetClosure: update.streetClosure ? 'Sí' : 'No',
+        tireBurning: update.tireBurning ? 'Sí' : 'No',
         notes: update.notes || '',
         createdBy: update.createdBy
           ? `${update.createdBy.firstName} ${update.createdBy.lastName}`

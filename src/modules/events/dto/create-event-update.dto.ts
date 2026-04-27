@@ -62,6 +62,14 @@ export class CreateEventUpdateDto {
   @IsBoolean()
   streetClosure: boolean;
 
+  @ApiProperty({
+    description: 'Tire burning at this moment',
+    example: false,
+    default: false,
+  })
+  @IsBoolean()
+  tireBurning: boolean;
+
   @ApiPropertyOptional({
     description:
       'Specific observations at this moment (weather, incidents, etc.)',

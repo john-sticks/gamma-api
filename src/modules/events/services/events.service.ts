@@ -128,6 +128,7 @@ export class EventsService {
         attendeeCount: 0,
         policePresence: false,
         streetClosure: false,
+        tireBurning: false,
         notes: 'Evento creado - Estado inicial',
         latitude: createEventDto.latitude,
         longitude: createEventDto.longitude,
@@ -406,6 +407,7 @@ export class EventsService {
               attendeeCount: latestUpdate.attendeeCount,
               policePresence: latestUpdate.policePresence,
               streetClosure: latestUpdate.streetClosure,
+              tireBurning: latestUpdate.tireBurning,
               updateTime: latestUpdate.updateTime,
             }
           : null,
