@@ -415,22 +415,95 @@ export class EventsService {
 
   async findPending(
     queryDto: QueryEventDto,
-    user: User,
   ): Promise<PaginatedResponse<Event>> {
-    const result = await this.findAll(
-      { ...queryDto, status: EventStatus.PENDING },
-      user,
-    );
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      eventType,
+      city,
+      locality,
+      dateFrom,
+      dateTo,
+    } = queryDto;
+    const skip = (page - 1) * limit;
 
-    // Exclude cancelled and pending_cancellation events from pending list
-    result.data = result.data.filter(
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const qb = this.eventsRepository
+      .createQueryBuilder('e')
+      .leftJoinAndSelect('e.createdBy', 'createdBy')
+      .leftJoinAndSelect('e.city', 'city')
+      .leftJoinAndSelect('e.locality', 'locality')
+      .where(
+        '(e.status = :pending OR (e.status IN (:...resolved) AND e.createdAt >= :startOfToday))',
+        {
+          pending: EventStatus.PENDING,
+          resolved: [EventStatus.APPROVED, EventStatus.REJECTED],
+          startOfToday,
+        },
+      );
+
+    if (search) {
+      qb.andWhere('e.title LIKE :search', { search: `%${search}%` });
+    }
+    if (eventType) {
+      qb.andWhere('e.eventType = :eventType', { eventType });
+    }
+    if (city && city.length > 0) {
+      qb.andWhere('e.cityId IN (:...city)', { city });
+    }
+    if (locality) {
+      qb.andWhere('e.localityId = :locality', { locality });
+    }
+    if (dateFrom && dateTo) {
+      qb.andWhere('e.eventDate BETWEEN :dateFrom AND :dateTo', {
+        dateFrom: new Date(dateFrom),
+        dateTo: new Date(dateTo),
+      });
+    } else if (dateFrom) {
+      qb.andWhere('e.eventDate >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    } else if (dateTo) {
+      qb.andWhere('e.eventDate <= :dateTo', { dateTo: new Date(dateTo) });
+    }
+
+    qb.addSelect(
+      "CASE WHEN e.status = 'pending' THEN 0 ELSE 1 END",
+      'status_order',
+    )
+      .orderBy('status_order', 'ASC')
+      .addOrderBy('e.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [events, total] = await qb.getManyAndCount();
+
+    // Exclude cancelled and pending_cancellation from the pending ones
+    const filtered = events.filter(
       (e) =>
-        e.lifecycleStatus !== EventLifecycleStatus.CANCELLED &&
-        e.lifecycleStatus !== EventLifecycleStatus.PENDING_CANCELLATION,
+        e.status !== EventStatus.PENDING ||
+        (e.lifecycleStatus !== EventLifecycleStatus.CANCELLED &&
+          e.lifecycleStatus !== EventLifecycleStatus.PENDING_CANCELLATION),
     );
-    result.meta.total = result.data.length;
 
-    return result;
+    const pendingCount = await this.eventsRepository.count({
+      where: { status: EventStatus.PENDING },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      data: filtered,
+      meta: {
+        total,
+        pendingCount,
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async getPendingCount(): Promise<{ count: number }> {

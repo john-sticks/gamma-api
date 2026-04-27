@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventsRepository } from '../repositories/events.repository';
 import { EventStatus, EventLifecycleStatus } from '../entities/event.entity';
-import { LessThanOrEqual, In } from 'typeorm';
+import { LessThanOrEqual } from 'typeorm';
 
 @Injectable()
 export class LifecycleSchedulerService {

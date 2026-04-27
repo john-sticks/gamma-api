@@ -43,6 +43,7 @@ export interface PaginatedResponse<T> {
   data: T[];
   meta: {
     total: number;
+    pendingCount?: number;
     page: number;
     limit: number;
     totalPages: number;

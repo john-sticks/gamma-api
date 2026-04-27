@@ -10,6 +10,9 @@ import {
   UPDATE_TYPE_LABELS,
 } from '../constants/labels';
 import * as ExcelJS from 'exceljs';
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment */
+const PDFDocument = require('pdfkit');
+/* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment */
 
 @Injectable()
 export class ExportService {
@@ -129,6 +132,141 @@ export class ExportService {
 
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   }
+
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
+  async exportListToPdf(query: QueryEventDto, user: User): Promise<Buffer> {
+    const result = await this.eventsService.findAll(
+      { ...query, page: 1, limit: 10000 },
+      user,
+    );
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({
+        margin: 40,
+        size: 'A4',
+        layout: 'landscape',
+      });
+      const chunks: Buffer[] = [];
+
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Title
+      doc
+        .fontSize(16)
+        .font('Helvetica-Bold')
+        .text('Listado de Eventos', { align: 'center' });
+      doc
+        .fontSize(10)
+        .font('Helvetica')
+        .text(
+          `Generado el ${new Date().toLocaleString('es-AR')}  •  Total: ${result.data.length} eventos`,
+          { align: 'center' },
+        );
+      doc.moveDown();
+
+      // Column definitions
+      const cols = [
+        { label: 'Título', width: 160 },
+        { label: 'Tipo', width: 80 },
+        { label: 'Fecha', width: 90 },
+        { label: 'Partido', width: 80 },
+        { label: 'Localidad', width: 80 },
+        { label: 'Estado', width: 80 },
+        { label: 'Ciclo de vida', width: 100 },
+      ];
+
+      const rowHeight = 18;
+      const startX = doc.page.margins.left;
+      let y = doc.y;
+
+      // Header row
+      doc.font('Helvetica-Bold').fontSize(8);
+      doc
+        .rect(
+          startX,
+          y,
+          cols.reduce((s, c) => s + c.width, 0),
+          rowHeight,
+        )
+        .fill('#E0E0E0');
+      doc.fillColor('black');
+      let x = startX;
+      for (const col of cols) {
+        doc.text(col.label, x + 3, y + 4, {
+          width: col.width - 6,
+          lineBreak: false,
+        });
+        x += col.width;
+      }
+      y += rowHeight;
+
+      // Data rows
+      doc.font('Helvetica').fontSize(7);
+      for (const [i, event] of result.data.entries()) {
+        if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+          doc.addPage();
+          y = doc.page.margins.top;
+        }
+
+        if (i % 2 === 0) {
+          doc
+            .rect(
+              startX,
+              y,
+              cols.reduce((s, c) => s + c.width, 0),
+              rowHeight,
+            )
+            .fill('#F9F9F9');
+          doc.fillColor('black');
+        }
+
+        const cells = [
+          event.title,
+          EVENT_TYPE_LABELS[event.eventType] || event.eventType,
+          new Date(event.eventDate).toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          event.city?.name || '',
+          event.locality?.name || '',
+          EVENT_STATUS_LABELS[event.status] || event.status,
+          event.lifecycleStatus
+            ? EVENT_LIFECYCLE_STATUS_LABELS[event.lifecycleStatus] ||
+              event.lifecycleStatus
+            : '',
+        ];
+
+        x = startX;
+        for (let ci = 0; ci < cols.length; ci++) {
+          doc.text(cells[ci] ?? '', x + 3, y + 4, {
+            width: cols[ci].width - 6,
+            lineBreak: false,
+            ellipsis: true,
+          });
+          x += cols[ci].width;
+        }
+
+        // Row border
+        doc
+          .rect(
+            startX,
+            y,
+            cols.reduce((s, c) => s + c.width, 0),
+            rowHeight,
+          )
+          .stroke('#CCCCCC');
+        y += rowHeight;
+      }
+
+      doc.end();
+    });
+  }
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 
   async exportEventHistory(eventId: string): Promise<Buffer> {
     const event = await this.eventsService.findOne(eventId);

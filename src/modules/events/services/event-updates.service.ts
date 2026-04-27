@@ -220,9 +220,26 @@ export class EventUpdatesService {
     page?: number;
     limit?: number;
     search?: string;
+    city?: string;
+    locality?: string;
+    updateType?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }): Promise<any> {
-    const { page = 1, limit = 10, search } = query;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      city,
+      locality,
+      updateType,
+      dateFrom,
+      dateTo,
+    } = query;
     const skip = (page - 1) * limit;
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
     const qb = this.eventUpdatesRepository
       .createQueryBuilder('eu')
@@ -230,23 +247,67 @@ export class EventUpdatesService {
       .leftJoinAndSelect('event.city', 'city')
       .leftJoinAndSelect('event.locality', 'locality')
       .leftJoinAndSelect('eu.createdBy', 'createdBy')
-      .where('eu.status = :status', { status: EventUpdateStatus.PENDING });
+      .where(
+        '(eu.status = :pending OR (eu.status IN (:...resolved) AND eu.createdAt >= :startOfToday))',
+        {
+          pending: EventUpdateStatus.PENDING,
+          resolved: [EventUpdateStatus.APPROVED, EventUpdateStatus.REJECTED],
+          startOfToday,
+        },
+      );
 
     if (search) {
       qb.andWhere('(event.title LIKE :search OR eu.notes LIKE :search)', {
         search: `%${search}%`,
       });
     }
+    if (city) {
+      const cityIds = city.includes(',')
+        ? city.split(',').map((c) => c.trim())
+        : [city];
+      qb.andWhere('event.cityId IN (:...cityIds)', { cityIds });
+    }
+    if (locality) {
+      qb.andWhere('event.localityId = :locality', { locality });
+    }
+    if (updateType) {
+      qb.andWhere('eu.updateType = :updateType', { updateType });
+    }
+    if (dateFrom && dateTo) {
+      qb.andWhere('event.eventDate BETWEEN :dateFrom AND :dateTo', {
+        dateFrom: new Date(dateFrom),
+        dateTo: new Date(dateTo),
+      });
+    } else if (dateFrom) {
+      qb.andWhere('event.eventDate >= :dateFrom', {
+        dateFrom: new Date(dateFrom),
+      });
+    } else if (dateTo) {
+      qb.andWhere('event.eventDate <= :dateTo', { dateTo: new Date(dateTo) });
+    }
 
-    qb.orderBy('eu.createdAt', 'DESC').skip(skip).take(limit);
+    qb.addSelect(
+      "CASE WHEN eu.status = 'pending' THEN 0 ELSE 1 END",
+      'status_order',
+    )
+      .orderBy('status_order', 'ASC')
+      .addOrderBy('eu.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit);
 
     const [data, total] = await qb.getManyAndCount();
+
+    const pendingCount = await this.eventUpdatesRepository.count({
+      where: { status: EventUpdateStatus.PENDING },
+    });
+
     const totalPages = Math.ceil(total / limit);
 
     return {
       data,
       meta: {
         total,
+        pendingCount,
         page,
         limit,
         totalPages,

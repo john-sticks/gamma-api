@@ -99,8 +99,8 @@ export class EventsController {
     status: 200,
     description: 'Paginated list of pending events',
   })
-  findPending(@Query() query: QueryEventDto, @CurrentUser() user: User) {
-    return this.eventsService.findPending(query, user);
+  findPending(@Query() query: QueryEventDto) {
+    return this.eventsService.findPending(query);
   }
 
   @Get('pending-count')
@@ -186,6 +186,23 @@ export class EventsController {
     res.send('\uFEFF' + csv); // BOM for Excel UTF-8
   }
 
+  @Get('export/pdf')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3)
+  @ApiOperation({ summary: 'Export events to PDF' })
+  @ApiResponse({ status: 200, description: 'PDF file' })
+  async exportPdf(
+    @Query() query: QueryEventDto,
+    @CurrentUser() user: User,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.exportService.exportListToPdf(query, user);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="eventos-${new Date().toISOString().slice(0, 10)}.pdf"`,
+    });
+    res.send(buffer);
+  }
+
   // Event Updates approval routes (BEFORE :id to avoid routing conflicts)
   @Get('updates/pending')
   @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3)
@@ -201,8 +218,22 @@ export class EventsController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
+    @Query('city') city?: string,
+    @Query('locality') locality?: string,
+    @Query('updateType') updateType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
-    return this.eventUpdatesService.findPendingUpdates({ page, limit, search });
+    return this.eventUpdatesService.findPendingUpdates({
+      page,
+      limit,
+      search,
+      city,
+      locality,
+      updateType,
+      dateFrom,
+      dateTo,
+    });
   }
 
   @Get('updates/pending-count')
