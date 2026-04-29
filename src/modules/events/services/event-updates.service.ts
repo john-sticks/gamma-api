@@ -41,6 +41,16 @@ export class EventUpdatesService {
       throw new NotFoundException(`Event with ID ${eventId} not found`);
     }
 
+    if (
+      createEventUpdateDto.updateType !== EventUpdateType.EVENT_CREATED &&
+      (event.lifecycleStatus === EventLifecycleStatus.COMPLETED ||
+        event.lifecycleStatus === EventLifecycleStatus.CANCELLED)
+    ) {
+      throw new BadRequestException(
+        'No se pueden agregar actualizaciones a un evento finalizado o cancelado.',
+      );
+    }
+
     // Use the specific time provided (now required)
     const updateTime = new Date(createEventUpdateDto.updateTime);
 

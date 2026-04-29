@@ -103,6 +103,12 @@ export class Event {
   })
   lifecycleStatus: EventLifecycleStatus;
 
+  @Column({ type: 'text', nullable: true })
+  relatedIncidentExcerpt: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  nearestPoliceStation: string | null;
+
   @Column({ type: 'int', nullable: true })
   attendeeCount: number;
 

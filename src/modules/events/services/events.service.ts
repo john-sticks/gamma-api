@@ -39,6 +39,14 @@ export class EventsService {
    * IMPORTANTE: El timezone está configurado globalmente en main.ts como America/Argentina/Buenos_Aires
    * Por lo tanto, todas las comparaciones de fechas usan automáticamente el horario de Buenos Aires
    */
+  private titleRequiresPoliceStation(titleName: string): boolean {
+    const lower = titleName.toLowerCase();
+    return (
+      lower.includes('reclamo de justicia') ||
+      lower.includes('reclamo de seguridad')
+    );
+  }
+
   private determineLifecycleStatus(eventDate: Date): EventLifecycleStatus {
     const now = new Date();
     const eventDateTime = new Date(eventDate);
@@ -71,7 +79,17 @@ export class EventsService {
 
     // Validate eventTitleId if provided and not custom
     if (createEventDto.eventTitleId && !createEventDto.isCustomTitle) {
-      await this.eventTitlesService.findOne(createEventDto.eventTitleId);
+      const eventTitle = await this.eventTitlesService.findOne(
+        createEventDto.eventTitleId,
+      );
+      if (
+        this.titleRequiresPoliceStation(eventTitle.name) &&
+        !createEventDto.nearestPoliceStation?.trim()
+      ) {
+        throw new BadRequestException(
+          'Debe indicar la dependencia policial más cercana para este tipo de evento.',
+        );
+      }
     }
 
     // Validate locality belongs to the selected city
@@ -144,6 +162,7 @@ export class EventsService {
   async findAll(
     queryDto: QueryEventDto,
     user: User,
+    sortByLifecycle = false,
   ): Promise<PaginatedResponse<Event>> {
     const {
       page = 1,
@@ -159,6 +178,100 @@ export class EventsService {
     } = queryDto;
 
     const skip = (page - 1) * limit;
+
+    if (sortByLifecycle) {
+      const qb = this.eventsRepository
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.city', 'city')
+        .leftJoinAndSelect('event.locality', 'locality')
+        .leftJoinAndSelect('event.eventTitle', 'eventTitle')
+        .leftJoinAndSelect('event.createdBy', 'createdBy')
+        .skip(skip)
+        .take(limit);
+
+      if (user.role === UserRole.LEVEL_4) {
+        const assignedCityIds = (user.assignedCities || []).map((c) => c.id);
+        if (assignedCityIds.length > 0) {
+          qb.andWhere('event.cityId IN (:...assignedCityIds)', {
+            assignedCityIds,
+          });
+        } else {
+          qb.andWhere('1 = 0');
+        }
+      }
+
+      if (search) {
+        qb.andWhere('event.title LIKE :search', { search: `%${search}%` });
+      }
+      if (eventType) {
+        qb.andWhere('event.eventType = :eventType', { eventType });
+      }
+      if (status) {
+        qb.andWhere('event.status = :status', { status });
+      }
+      if (lifecycleStatus) {
+        qb.andWhere('event.lifecycleStatus = :lifecycleStatus', {
+          lifecycleStatus,
+        });
+      }
+      if (city && city.length > 0) {
+        if (user.role === UserRole.LEVEL_4) {
+          const assignedCityIds = (user.assignedCities || []).map((c) => c.id);
+          const allowed = city.filter((id) => assignedCityIds.includes(id));
+          const cityFilter = allowed.length > 0 ? allowed : ['__none__'];
+          qb.andWhere('event.cityId IN (:...cityFilter)', { cityFilter });
+        } else {
+          qb.andWhere('event.cityId IN (:...cityIds)', { cityIds: city });
+        }
+      }
+      if (locality) {
+        qb.andWhere('event.localityId = :locality', { locality });
+      }
+      if (dateFrom && dateTo) {
+        qb.andWhere('event.eventDate BETWEEN :dateFrom AND :dateTo', {
+          dateFrom: new Date(dateFrom),
+          dateTo: new Date(dateTo),
+        });
+      } else if (dateFrom) {
+        qb.andWhere('event.eventDate >= :dateFrom', {
+          dateFrom: new Date(dateFrom),
+        });
+      } else if (dateTo) {
+        qb.andWhere('event.eventDate <= :dateTo', {
+          dateTo: new Date(dateTo),
+        });
+      }
+
+      qb.addSelect(
+        `CASE event.lifecycleStatus
+          WHEN 'ongoing' THEN 1
+          WHEN 'pending' THEN 2
+          WHEN 'awaiting_start' THEN 2
+          WHEN 'completed' THEN 3
+          WHEN 'pending_cancellation' THEN 4
+          WHEN 'cancelled' THEN 4
+          ELSE 2
+        END`,
+        'lifecycle_order',
+      )
+        .orderBy('lifecycle_order', 'ASC')
+        .addOrderBy('event.eventDate', 'ASC');
+
+      const [data, total] = await qb.getManyAndCount();
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        data: data as unknown as Event[],
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      };
+    }
 
     // Build where clause
     const where: Record<string, any> = {};
@@ -240,7 +353,7 @@ export class EventsService {
     queryDto: QueryEventDto,
     user: User,
   ): Promise<PaginatedResponse<any>> {
-    const result = await this.findAll(queryDto, user);
+    const result = await this.findAll(queryDto, user, true);
 
     const eventIds = result.data.map((e) => e.id);
     const latestUpdates =
@@ -312,6 +425,21 @@ export class EventsService {
 
     if (updateEventDto.status && !isModerator) {
       throw new ForbiddenException('Only moderators can change event status');
+    }
+
+    // Validate nearestPoliceStation if the selected title requires it
+    const titleId = updateEventDto.eventTitleId ?? event.eventTitleId;
+    if (titleId) {
+      const eventTitle = await this.eventTitlesService.findOne(titleId);
+      if (this.titleRequiresPoliceStation(eventTitle.name)) {
+        const policeStation =
+          updateEventDto.nearestPoliceStation ?? event.nearestPoliceStation;
+        if (!policeStation?.trim()) {
+          throw new BadRequestException(
+            'Debe indicar la dependencia policial más cercana para este tipo de evento.',
+          );
+        }
+      }
     }
 
     // Validate coordinates if they or the city changed

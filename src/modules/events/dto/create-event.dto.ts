@@ -109,4 +109,23 @@ export class CreateEventDto {
   })
   @IsOptional()
   isCustomTitle?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Extracto del hecho que motivó este evento',
+    example: 'El día 15 de abril ocurrió un homicidio en la localidad de...',
+  })
+  @IsOptional()
+  @IsString()
+  relatedIncidentExcerpt?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Dependencia policial más cercana al lugar del evento (requerido para reclamos de justicia o seguridad)',
+    example: 'Comisaría 1ra de La Plata',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  nearestPoliceStation?: string;
 }
