@@ -16,11 +16,13 @@ import { Event } from './entities/event.entity';
 import { EventUpdate } from './entities/event-update.entity';
 import { EventTitle } from './entities/event-title.entity';
 import { CitiesModule } from '../cities/cities.module';
+import { RequirementsModule } from '../requirements/requirements.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Event, EventUpdate, EventTitle]),
     CitiesModule,
+    RequirementsModule,
     ScheduleModule.forRoot(),
   ],
   controllers: [EventsController, EventTitlesController],

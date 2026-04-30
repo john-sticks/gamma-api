@@ -119,6 +119,9 @@ export class Event {
   @Column()
   createdById: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  requirementId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

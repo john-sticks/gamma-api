@@ -128,4 +128,12 @@ export class CreateEventDto {
   @IsString()
   @MaxLength(500)
   nearestPoliceStation?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID del requerimiento al que responde este evento (si aplica)',
+    example: 'uuid-requerimiento',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  requirementId?: string;
 }

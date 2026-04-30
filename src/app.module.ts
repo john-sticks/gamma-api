@@ -9,6 +9,7 @@ import { SeedModule } from './modules/seed/seed.module';
 import { EventsModule } from './modules/events/events.module';
 import { CitiesModule } from './modules/cities/cities.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { RequirementsModule } from './modules/requirements/requirements.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/common/guards/roles.guard';
 import databaseConfig from './config/database.config';
@@ -29,6 +30,7 @@ import authConfig from './config/auth.config';
     EventsModule,
     CitiesModule,
     NotificationsModule,
+    RequirementsModule,
     SeedModule,
   ],
   controllers: [],

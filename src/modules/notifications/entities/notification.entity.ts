@@ -9,11 +9,15 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Event } from '../../events/entities/event.entity';
+import { Requirement } from '../../requirements/entities/requirement.entity';
 
 export enum NotificationType {
   CANCELLATION_REQUEST = 'cancellation_request',
   CANCELLATION_APPROVED = 'cancellation_approved',
   CANCELLATION_REJECTED = 'cancellation_rejected',
+  REQUIREMENT_CREATED = 'requirement_created',
+  REQUIREMENT_RESPONDED = 'requirement_responded',
+  REQUIREMENT_VOIDED = 'requirement_voided',
 }
 
 export enum NotificationStatus {
@@ -67,6 +71,13 @@ export class Notification {
 
   @Column({ nullable: true })
   eventId: string;
+
+  @ManyToOne(() => Requirement, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'requirementId' })
+  requirement: Requirement;
+
+  @Column({ type: 'varchar', nullable: true })
+  requirementId: string;
 
   @CreateDateColumn()
   createdAt: Date;

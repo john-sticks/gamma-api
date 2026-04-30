@@ -412,6 +412,31 @@ export class EventUpdatesService {
     return result;
   }
 
+  async getMaxAttendeesForEvents(
+    eventIds: string[],
+  ): Promise<Record<string, number>> {
+    if (eventIds.length === 0) return {};
+
+    const results = await this.eventUpdatesRepository
+      .createQueryBuilder('eu')
+      .select('eu.eventId', 'eventId')
+      .addSelect('MAX(eu.attendeeCount)', 'maxAttendeeCount')
+      .where('eu.eventId IN (:...eventIds)', { eventIds })
+      .andWhere('eu.status = :status', { status: EventUpdateStatus.APPROVED })
+      .andWhere('eu.attendeeCount IS NOT NULL')
+      .groupBy('eu.eventId')
+      .getRawMany();
+
+    const result: Record<string, number> = {};
+    for (const row of results as {
+      eventId: string;
+      maxAttendeeCount: string;
+    }[]) {
+      result[row.eventId] = Number(row.maxAttendeeCount);
+    }
+    return result;
+  }
+
   async getTimelineForChart(eventId: string): Promise<any> {
     const updates = await this.eventUpdatesRepository.find({
       where: {

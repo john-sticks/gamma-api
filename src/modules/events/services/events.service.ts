@@ -22,6 +22,8 @@ import { EventUpdateType } from '../entities/event-update.entity';
 import { GeoValidationService } from './geo-validation.service';
 import { CitiesService } from '../../cities/services/cities.service';
 import { EventTitlesService } from './event-titles.service';
+import { RequirementsService } from '../../requirements/services/requirements.service';
+import { RequirementStatus } from '../../requirements/entities/requirement.entity';
 
 @Injectable()
 export class EventsService {
@@ -32,6 +34,7 @@ export class EventsService {
     private readonly geoValidationService: GeoValidationService,
     private readonly citiesService: CitiesService,
     private readonly eventTitlesService: EventTitlesService,
+    private readonly requirementsService: RequirementsService,
   ) {}
 
   /**
@@ -115,6 +118,21 @@ export class EventsService {
       throw new BadRequestException(
         `Las coordenadas (${createEventDto.latitude}, ${createEventDto.longitude}) no corresponden al partido "${city.name}". Verificá que las coordenadas sean correctas.`,
       );
+    }
+
+    // Validate that the linked requirement is still active
+    if (createEventDto.requirementId) {
+      const requirement = await this.requirementsService.findOne(
+        createEventDto.requirementId,
+      );
+      if (
+        requirement.status !== RequirementStatus.ACTIVE &&
+        requirement.status !== RequirementStatus.EXPIRED
+      ) {
+        throw new BadRequestException(
+          'El requerimiento asociado ya no está activo.',
+        );
+      }
     }
 
     const status =
@@ -356,13 +374,25 @@ export class EventsService {
     const result = await this.findAll(queryDto, user, true);
 
     const eventIds = result.data.map((e) => e.id);
-    const latestUpdates =
-      await this.eventUpdatesService.getLatestUpdatesForEvents(eventIds);
+    const completedEventIds = result.data
+      .filter((e) => e.lifecycleStatus === EventLifecycleStatus.COMPLETED)
+      .map((e) => e.id);
+
+    const [latestUpdates, maxAttendeesMap] = await Promise.all([
+      this.eventUpdatesService.getLatestUpdatesForEvents(eventIds),
+      completedEventIds.length > 0
+        ? this.eventUpdatesService.getMaxAttendeesForEvents(completedEventIds)
+        : Promise.resolve({} as Record<string, number>),
+    ]);
 
     const enrichedData = result.data.map((event) => {
       const latestUpdate = latestUpdates[event.id];
       return {
         ...event,
+        maxAttendeeCount:
+          event.lifecycleStatus === EventLifecycleStatus.COMPLETED
+            ? (maxAttendeesMap[event.id] ?? null)
+            : undefined,
         latestUpdate: latestUpdate
           ? {
               id: latestUpdate.id,
