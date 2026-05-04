@@ -10,6 +10,20 @@ import {
   UPDATE_TYPE_LABELS,
 } from '../constants/labels';
 import * as ExcelJS from 'exceljs';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  Table,
+  TableRow,
+  TableCell,
+  TextRun,
+  WidthType,
+  AlignmentType,
+  BorderStyle,
+  ShadingType,
+  TableLayoutType,
+} from 'docx';
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment */
 const PDFDocument = require('pdfkit');
 /* eslint-enable @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-assignment */
@@ -374,6 +388,138 @@ export class ExportService {
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  async exportListToDocx(query: QueryEventDto, user: User): Promise<Buffer> {
+    const result = await this.eventsService.findAll(
+      { ...query, page: 1, limit: 10000 },
+      user,
+    );
+
+    // Group events by date (day), sorted chronologically
+    const byDay = new Map<string, typeof result.data>();
+    for (const event of result.data) {
+      const date = new Date(event.eventDate);
+      const dayKey = date.toLocaleDateString('es-AR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+      const formatted =
+        dayKey.charAt(0).toUpperCase() + dayKey.slice(1).replace(',', '');
+      if (!byDay.has(formatted)) byDay.set(formatted, []);
+      byDay.get(formatted)!.push(event);
+    }
+
+    // DXA widths: 15% + 15% + 20% + 50% of ~9000 DXA usable width
+    const COL = { loc: 1350, par: 1350, eve: 1800, ext: 4500 };
+
+    const border = {
+      top: { style: BorderStyle.SINGLE, size: 4, color: '999999' },
+      bottom: { style: BorderStyle.SINGLE, size: 4, color: '999999' },
+      left: { style: BorderStyle.SINGLE, size: 4, color: '999999' },
+      right: { style: BorderStyle.SINGLE, size: 4, color: '999999' },
+    };
+
+    const makeCell = (
+      text: string,
+      w: number,
+      isHeader: boolean,
+      isAlt = false,
+    ) =>
+      new TableCell({
+        width: { size: w, type: WidthType.DXA },
+        borders: border,
+        shading: isHeader
+          ? { type: ShadingType.SOLID, color: '1F3864', fill: '1F3864' }
+          : isAlt
+            ? { type: ShadingType.SOLID, color: 'DCE6F1', fill: 'DCE6F1' }
+            : { type: ShadingType.CLEAR, color: 'auto', fill: 'FFFFFF' },
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: (text ?? '').replace(/\r?\n/g, ' '),
+                bold: isHeader,
+                color: isHeader ? 'FFFFFF' : '000000',
+                size: 18,
+              }),
+            ],
+          }),
+        ],
+      });
+
+    const subtitle =
+      query.dateFrom && query.dateTo
+        ? `Informe Retrospectivo del ${query.dateFrom} al ${query.dateTo}`
+        : `Informe de Eventos — ${new Date().toLocaleDateString('es-AR')}`;
+
+    const children: (Paragraph | Table)[] = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text: 'Superintendencia de Inteligencia Criminal',
+            bold: true,
+            size: 28,
+            color: '1F3864',
+          }),
+        ],
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: subtitle, size: 20, color: '444444' })],
+      }),
+      new Paragraph({ children: [new TextRun({ text: '' })] }),
+    ];
+
+    for (const [day, events] of byDay) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({ text: day, bold: true, size: 22, color: '1F3864' }),
+          ],
+          spacing: { before: 240, after: 120 },
+        }),
+        new Table({
+          width: { size: 9000, type: WidthType.DXA },
+          layout: TableLayoutType.FIXED,
+          columnWidths: [COL.loc, COL.par, COL.eve, COL.ext],
+          rows: [
+            new TableRow({
+              children: [
+                makeCell('Localidad', COL.loc, true),
+                makeCell('Partido', COL.par, true),
+                makeCell('Evento', COL.eve, true),
+                makeCell('Extracto', COL.ext, true),
+              ],
+            }),
+            ...events.map((event, i) => {
+              const extracto =
+                event.relatedIncidentExcerpt || event.description || '';
+              return new TableRow({
+                children: [
+                  makeCell(
+                    event.locality?.name || '',
+                    COL.loc,
+                    false,
+                    i % 2 !== 0,
+                  ),
+                  makeCell(event.city?.name || '', COL.par, false, i % 2 !== 0),
+                  makeCell(event.title || '', COL.eve, false, i % 2 !== 0),
+                  makeCell(extracto, COL.ext, false, i % 2 !== 0),
+                ],
+              });
+            }),
+          ],
+        }),
+        new Paragraph({ children: [new TextRun({ text: '' })] }),
+      );
+    }
+
+    const doc = new Document({ sections: [{ children }] });
+    return Packer.toBuffer(doc);
   }
 
   private escapeCsv(value: string): string {

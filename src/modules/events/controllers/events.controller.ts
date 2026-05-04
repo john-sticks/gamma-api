@@ -203,6 +203,24 @@ export class EventsController {
     res.send(buffer);
   }
 
+  @Get('export/docx')
+  @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3)
+  @ApiOperation({ summary: 'Export events to Word (retrospective format)' })
+  @ApiResponse({ status: 200, description: 'Word .docx file' })
+  async exportDocx(
+    @Query() query: QueryEventDto,
+    @CurrentUser() user: User,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.exportService.exportListToDocx(query, user);
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': `attachment; filename="retrospectiva-${new Date().toISOString().slice(0, 10)}.docx"`,
+    });
+    res.send(buffer);
+  }
+
   // Event Updates approval routes (BEFORE :id to avoid routing conflicts)
   @Get('updates/pending')
   @Roles(UserRole.LEVEL_1, UserRole.LEVEL_2, UserRole.LEVEL_3)

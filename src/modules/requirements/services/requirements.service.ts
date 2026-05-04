@@ -370,9 +370,14 @@ export class RequirementsService {
     );
 
     if (!existing) {
-      throw new BadRequestException(
-        'No tenés una respuesta previa en este requerimiento',
-      );
+      // No prior response — create a positive one directly
+      const response = this.responsesRepository.create({
+        requirementId,
+        respondedById: user.id,
+        type: RequirementResponseType.POSITIVE,
+        notes: dto.notes ?? null,
+      });
+      return this.responsesRepository.save(response);
     }
 
     if (existing.type === RequirementResponseType.POSITIVE) {

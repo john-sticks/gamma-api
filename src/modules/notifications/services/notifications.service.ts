@@ -52,7 +52,7 @@ export class NotificationsService {
       skip,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['sender', 'event'],
+      relations: ['sender', 'event', 'requirement'],
     });
 
     const totalPages = Math.ceil(total / limit);
